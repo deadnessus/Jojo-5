@@ -1,16 +1,11 @@
-// Invasão FC: partidas, conferência da pontuação e ranking (geral e do mês).
+// Invasão Estelar: partidas, conferência da pontuação e ranking (geral e do mês).
 // Copie para functions/_lib/ do queres-games. Os números espelham src/logica.js do jogo.
 import { prepararBanco } from './conta.js';
-
-export const IDS_TIMES = [
-  'atletico-mg', 'bahia', 'botafogo', 'bragantino', 'ceara', 'corinthians', 'cruzeiro', 'flamengo', 'fluminense', 'fortaleza',
-  'gremio', 'internacional', 'juventude', 'mirassol', 'palmeiras', 'santos', 'sao-paulo', 'sport', 'vasco', 'vitoria',
-];
 
 // Números do jogo (espelho de src/logica.js).
 const PONTOS_NAVE_BASE = 20;
 const MULT_MAX = 10;
-const FOLEGO_MAX_SEG = 60;
+const ENERGIA_MAX_SEG = 60;
 const BONUS_POR_SEG = 10;
 
 // Limites que o servidor confere.
@@ -28,10 +23,10 @@ export async function prepararPartidas(db) {
   if (partidasProntas) return;
   await db.batch([
     db.prepare(
-      'CREATE TABLE IF NOT EXISTS ifc_partidas (id INTEGER PRIMARY KEY AUTOINCREMENT, conta_id INTEGER NOT NULL, time TEXT NOT NULL, mes TEXT NOT NULL, iniciado_em INTEGER NOT NULL, estado TEXT NOT NULL, pontos INTEGER, fase INTEGER, naves INTEGER, tempo_ms INTEGER, enviado_em INTEGER)',
+      'CREATE TABLE IF NOT EXISTS ie_partidas (id INTEGER PRIMARY KEY AUTOINCREMENT, conta_id INTEGER NOT NULL, mes TEXT NOT NULL, iniciado_em INTEGER NOT NULL, estado TEXT NOT NULL, pontos INTEGER, fase INTEGER, naves INTEGER, tempo_ms INTEGER, enviado_em INTEGER)',
     ),
-    db.prepare('CREATE INDEX IF NOT EXISTS ifc_ranking ON ifc_partidas (estado, mes, pontos)'),
-    db.prepare('CREATE INDEX IF NOT EXISTS ifc_conta ON ifc_partidas (conta_id, estado)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS ie_ranking ON ie_partidas (estado, mes, pontos)'),
+    db.prepare('CREATE INDEX IF NOT EXISTS ie_conta ON ie_partidas (conta_id, estado)'),
   ]);
   partidasProntas = true;
 }
@@ -45,11 +40,11 @@ export function mesDe(agora = Date.now()) {
 
 export const mesValido = (m) => (typeof m === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(m) ? m : null);
 
-// Pontuação máxima possível para `naves` derrubadas, terminando na fase informada (espelho de logica.js).
-// Quando o fôlego acaba a fase recomeça, então as naves se acumulam entre as fases.
+// Pontuação máxima possível para `naves` derrubadas, terminando na onda informada (espelho de logica.js).
+// Quando o fôlego acaba a onda recomeça, então as naves se acumulam entre as fases.
 export function pontosMaximos(fase, naves) {
   let bonus = 0;
-  for (let k = 1; k <= fase; k++) bonus += FOLEGO_MAX_SEG * BONUS_POR_SEG * k;
+  for (let k = 1; k <= fase; k++) bonus += ENERGIA_MAX_SEG * BONUS_POR_SEG * k;
   return naves * PONTOS_NAVE_BASE * Math.min(fase, MULT_MAX) + bonus;
 }
 
@@ -71,24 +66,24 @@ export function conferirEnvio({ pontos, fase, naves, tempoMs }, decorridoMs) {
 // Devolve o top e, se a pessoa estiver logada, a linha dela (mesmo fora do top).
 const SQL_RANKING = `
 WITH melhores AS (
-  SELECT conta_id, time, pontos, fase, enviado_em,
+  SELECT conta_id, pontos, fase, enviado_em,
          ROW_NUMBER() OVER (PARTITION BY conta_id ORDER BY pontos DESC, enviado_em ASC) AS rn
-  FROM ifc_partidas
+  FROM ie_partidas
   WHERE estado = 'enviada' AND (? IS NULL OR mes = ?)
 ), topo AS (
-  SELECT conta_id, time, pontos, fase, enviado_em,
+  SELECT conta_id, pontos, fase, enviado_em,
          ROW_NUMBER() OVER (ORDER BY pontos DESC, enviado_em ASC) AS posicao,
          COUNT(*) OVER () AS total
   FROM melhores WHERE rn = 1
 )
-SELECT t.posicao, c.apelido, t.time, t.pontos, t.fase, t.total, t.conta_id
+SELECT t.posicao, c.apelido, t.pontos, t.fase, t.total, t.conta_id
 FROM topo t JOIN contas c ON c.id = t.conta_id
 WHERE t.posicao <= ? OR t.conta_id = ?
 ORDER BY t.posicao`;
 
 export async function rankingDo(db, { mes = null, contaId = 0 }) {
   const { results } = await db.prepare(SQL_RANKING).bind(mes, mes, MAX_RANKING, contaId).all();
-  const linha = (r) => ({ posicao: r.posicao, apelido: r.apelido, time: r.time, pontos: r.pontos, fase: r.fase });
+  const linha = (r) => ({ posicao: r.posicao, apelido: r.apelido, pontos: r.pontos, fase: r.fase });
   const eu = results.find((r) => r.conta_id === contaId);
   return {
     total: results.length ? results[0].total : 0,

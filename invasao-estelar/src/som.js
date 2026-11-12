@@ -1,5 +1,5 @@
 // Sons feitos no código (Web Audio), sem arquivos de áudio. Ligado/desligado fica salvo no aparelho.
-const LS_SOM = 'invasao_fc_som';
+const LS_SOM = 'invasao_estelar_som';
 
 let ctx = null;
 let ruido = null;
@@ -42,7 +42,7 @@ function tom(tipo, freq, fim, dur, vol, atraso = 0) {
 }
 
 const SONS = {
-  chute: () => tom('square', 620, 180, 0.09, 0.08),
+  tiro: () => tom('square', 1100, 260, 0.09, 0.06),
   explosao: () => {
     const s = ctx.createBufferSource();
     const g = ctx.createGain();
@@ -51,7 +51,7 @@ const SONS = {
     s.connect(g).connect(ctx.destination);
     s.start();
   },
-  cartao: () => tom('triangle', 320, 150, 0.16, 0.12),
+  disparo: () => tom('sawtooth', 340, 120, 0.2, 0.05),
   perdeu: () => tom('sawtooth', 300, 70, 0.45, 0.12),
   fase: () => { tom('triangle', 523, 523, 0.1, 0.12); tom('triangle', 659, 659, 0.1, 0.12, 0.09); tom('triangle', 784, 784, 0.16, 0.12, 0.18); },
   vida: () => { tom('sine', 660, 660, 0.1, 0.12); tom('sine', 880, 880, 0.14, 0.12, 0.1); },

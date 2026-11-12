@@ -3,10 +3,10 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { criarSessao, prepararBanco } from '../servidor/functions/_lib/conta.js';
-import { conferirEnvio, pontosMaximos, mesDe } from '../servidor/functions/_lib/invasao-fc.js';
-import { onRequestPost as iniciar } from '../servidor/functions/api/invasao-fc/iniciar.js';
-import { onRequestPost as enviar } from '../servidor/functions/api/invasao-fc/enviar.js';
-import { onRequestGet as ranking } from '../servidor/functions/api/invasao-fc/ranking.js';
+import { conferirEnvio, pontosMaximos, mesDe } from '../servidor/functions/_lib/invasao-estelar.js';
+import { onRequestPost as iniciar } from '../servidor/functions/api/invasao-estelar/iniciar.js';
+import { onRequestPost as enviar } from '../servidor/functions/api/invasao-estelar/enviar.js';
+import { onRequestGet as ranking } from '../servidor/functions/api/invasao-estelar/ranking.js';
 
 // Imita o suficiente do D1 (prepare/bind/first/all/run/batch) para as rotas.
 function d1Falso() {
@@ -33,7 +33,7 @@ function d1Falso() {
 }
 
 const ORIGEM = 'https://queres.games';
-const URL_BASE = 'https://queres.games/api/invasao-fc/';
+const URL_BASE = 'https://queres.games/api/invasao-estelar/';
 
 let env;
 let cookieA;
@@ -65,7 +65,7 @@ function pedidoGet(caminho, cookie) {
 
 // Pula tempo: a partida foi iniciada `segundos` atrás (o servidor mede o tempo a partir do início).
 async function envelhecer(id, segundos = 120) {
-  await env.DB.prepare('UPDATE ifc_partidas SET iniciado_em = iniciado_em - ? WHERE id = ?').bind(segundos * 1000, id).run();
+  await env.DB.prepare('UPDATE ie_partidas SET iniciado_em = iniciado_em - ? WHERE id = ?').bind(segundos * 1000, id).run();
 }
 
 before(async () => {
@@ -114,20 +114,15 @@ test('conferência: tipo errado é recusado', () => {
 });
 
 test('iniciar: sem login responde 401', async () => {
-  const r = await iniciar({ request: pedidoPost('iniciar', { time: 'flamengo' }), env });
+  const r = await iniciar({ request: pedidoPost('iniciar', {}), env });
   assert.equal(r.status, 401);
-});
-
-test('iniciar: time que não existe é recusado', async () => {
-  const r = await iniciar({ request: pedidoPost('iniciar', { time: 'time-inventado' }, cookieA), env });
-  assert.equal(r.status, 400);
 });
 
 test('iniciar: pedido de outro site é recusado', async () => {
   const req = new Request(URL_BASE + 'iniciar', {
     method: 'POST',
     headers: { 'content-type': 'application/json', origin: 'https://site-estranho.com', cookie: cookieA },
-    body: JSON.stringify({ time: 'flamengo' }),
+    body: JSON.stringify({}),
   });
   assert.equal((await iniciar({ request: req, env })).status, 403);
 });
@@ -135,7 +130,7 @@ test('iniciar: pedido de outro site é recusado', async () => {
 let partidaA;
 
 test('iniciar: começa a partida e devolve o id e o mês de Brasília', async () => {
-  const r = await iniciar({ request: pedidoPost('iniciar', { time: 'flamengo' }, cookieA), env });
+  const r = await iniciar({ request: pedidoPost('iniciar', {}, cookieA), env });
   assert.equal(r.status, 200);
   const corpo = await r.json();
   assert.ok(Number.isInteger(corpo.partida));
@@ -156,7 +151,7 @@ test('enviar: partida de outra conta não é encontrada', async () => {
 test('enviar: pontuação impossível é recusada e a partida continua aberta', async () => {
   const r = await enviar({ request: pedidoPost('enviar', { partida: partidaA, pontos: 99999999, fase: 1, naves: 1, tempoMs: 1000 }, cookieA), env });
   assert.equal(r.status, 422);
-  const linha = await env.DB.prepare('SELECT estado FROM ifc_partidas WHERE id = ?').bind(partidaA).first();
+  const linha = await env.DB.prepare('SELECT estado FROM ie_partidas WHERE id = ?').bind(partidaA).first();
   assert.equal(linha.estado, 'jogando');
 });
 
@@ -176,21 +171,21 @@ test('enviar: a mesma partida não vale duas vezes', async () => {
 });
 
 test('iniciar de novo abandona a partida aberta anterior', async () => {
-  const abriu = await (await iniciar({ request: pedidoPost('iniciar', { time: 'santos' }, cookieB), env })).json();
-  const outra = await (await iniciar({ request: pedidoPost('iniciar', { time: 'santos' }, cookieB), env })).json();
-  const antiga = await env.DB.prepare('SELECT estado FROM ifc_partidas WHERE id = ?').bind(abriu.partida).first();
+  const abriu = await (await iniciar({ request: pedidoPost('iniciar', {}, cookieB), env })).json();
+  const outra = await (await iniciar({ request: pedidoPost('iniciar', {}, cookieB), env })).json();
+  const antiga = await env.DB.prepare('SELECT estado FROM ie_partidas WHERE id = ?').bind(abriu.partida).first();
   assert.equal(antiga.estado, 'abandonada');
-  const nova = await env.DB.prepare('SELECT estado FROM ifc_partidas WHERE id = ?').bind(outra.partida).first();
+  const nova = await env.DB.prepare('SELECT estado FROM ie_partidas WHERE id = ?').bind(outra.partida).first();
   assert.equal(nova.estado, 'jogando');
 });
 
 test('ranking: geral e do mês mostram a melhor partida de cada conta, em ordem', async () => {
   // B envia uma partida pior que a de A
-  const bId = (await (await iniciar({ request: pedidoPost('iniciar', { time: 'santos' }, cookieB), env })).json()).partida;
+  const bId = (await (await iniciar({ request: pedidoPost('iniciar', {}, cookieB), env })).json()).partida;
   await envelhecer(bId);
   await enviar({ request: pedidoPost('enviar', { partida: bId, pontos: 100, fase: 1, naves: 5, tempoMs: 30000 }, cookieB), env });
   // A envia uma partida melhor e outra pior: a melhor é a que conta
-  const aId = (await (await iniciar({ request: pedidoPost('iniciar', { time: 'flamengo' }, cookieA), env })).json()).partida;
+  const aId = (await (await iniciar({ request: pedidoPost('iniciar', {}, cookieA), env })).json()).partida;
   await envelhecer(aId);
   await enviar({ request: pedidoPost('enviar', { partida: aId, pontos: 200, fase: 1, naves: 10, tempoMs: 40000 }, cookieA), env });
 
@@ -224,6 +219,7 @@ test('ranking: quem não está logado vê o top e não recebe "eu"', async () =>
   assert.equal(corpo.eu, undefined);
   assert.ok(corpo.top.length >= 1);
   assert.ok(!('conta_id' in corpo.top[0]), 'não expõe o id interno da conta');
+  assert.ok(!('time' in corpo.top[0]), 'o ranking não tem mais time');
 });
 
 test('ranking: sem o banco responde 503', async () => {

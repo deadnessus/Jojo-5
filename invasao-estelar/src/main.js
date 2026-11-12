@@ -1,22 +1,25 @@
-// Invasão FC: telas, entrada (toque e teclado), laço do jogo e fluxo de conta/ranking.
+// Invasão Estelar: telas, entrada (toque e teclado), laço do jogo e fluxo de conta/ranking.
 import * as L from './logica.js';
 import { novaPartida, atualizar, resultado } from './motor.js';
-import { desenharPartida } from './desenho.js';
-import { TIMES, TIMES_POR_ID, IDS_TIMES } from './times.js';
-import { spriteBandeira } from './bandeiras.js';
+import { desenharPartida, desenharFundo } from './desenho.js';
+import { desenharJogador, definirResolucao } from './naves.js';
+import { novosEfeitos, reagir, atualizarEfeitos, rastroDoMotor } from './efeitos.js';
 import { temSite, eu, iniciarPartida, enviarPartida, ranking } from './conta-ponte.js';
 import { liberarSom, tocar, vibrar, alternarSom, somLigado } from './som.js';
 
 const $ = (id) => document.getElementById(id);
-const LS_TIME = 'invasao_fc_time';
-const LS_RECORDE = 'invasao_fc_recorde';
-const TELAS = ['tela-inicio', 'tela-times', 'tela-ranking', 'tela-jogo', 'tela-fim'];
+const LS_RECORDE = 'invasao_estelar_recorde';
+const TELAS = ['tela-inicio', 'tela-ranking', 'tela-jogo', 'tela-fim'];
 
 const canvas = $('campo');
 const g = canvas.getContext('2d');
+const fundo = $('fundo');
+const gf = fundo.getContext('2d');
+const naveMenu = $('nave-menu');
+const gn = naveMenu.getContext('2d');
 
-let escolhido = null; // id do time
 let partida = null; // estado do motor
+let efeitos = novosEfeitos();
 let partidaServidor = null; // id da partida no servidor (só se a pessoa estiver logada)
 let semRanking = null; // null | 'sem-site' (jogo fora do queres.games) | 'sem-servidor' (sem conexão agora)
 let rodando = false;
@@ -32,15 +35,6 @@ function mostrar(id) {
   for (const t of TELAS) $(t).hidden = t !== id;
 }
 
-function lerTime() {
-  try {
-    const id = localStorage.getItem(LS_TIME);
-    return IDS_TIMES.includes(id) ? id : null;
-  } catch (e) { return null; }
-}
-function guardarTime(id) {
-  try { localStorage.setItem(LS_TIME, id); } catch (e) { /* sem armazenamento */ }
-}
 function lerRecorde() {
   try { return Number(localStorage.getItem(LS_RECORDE)) || 0; } catch (e) { return 0; }
 }
@@ -59,7 +53,7 @@ function elemento(tag, attrs = {}, ...filhos) {
   return n;
 }
 
-/* ---------- tela do jogo: tamanho e entrada ---------- */
+/* ---------- tamanho das telas ---------- */
 function ajustarCanvas() {
   const dpr = window.devicePixelRatio || 1;
   const escala = Math.min(window.innerWidth / L.LARGURA, window.innerHeight / L.ALTURA);
@@ -68,8 +62,53 @@ function ajustarCanvas() {
   canvas.width = Math.round(L.LARGURA * escala * dpr);
   canvas.height = Math.round(L.ALTURA * escala * dpr);
   g.setTransform(canvas.width / L.LARGURA, 0, 0, canvas.height / L.ALTURA, 0, 0);
+  definirResolucao(escala * dpr);
 }
 
+function ajustarFundo() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  fundo.width = Math.round(window.innerWidth * dpr);
+  fundo.height = Math.round(window.innerHeight * dpr);
+  // o desenho do fundo é 360 x 640: cobre a tela toda, cortando o que sobra
+  const escala = Math.max(fundo.width / L.LARGURA, fundo.height / L.ALTURA);
+  gf.setTransform(escala, 0, 0, escala, (fundo.width - L.LARGURA * escala) / 2, (fundo.height - L.ALTURA * escala) / 2);
+}
+
+function ajustarMenu() {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const caixa = naveMenu.getBoundingClientRect();
+  naveMenu.width = Math.max(1, Math.round(caixa.width * dpr));
+  naveMenu.height = Math.max(1, Math.round(caixa.height * dpr));
+  const escala = naveMenu.width / 200;
+  gn.setTransform(escala, 0, 0, escala, 0, 0);
+  definirResolucao(Math.max(escala * 1.6, 2));
+}
+
+/* ---------- fundo animado dos menus ---------- */
+let menuRodando = false;
+let menuInicio = 0;
+function quadroMenu(t) {
+  if (!menuRodando) return;
+  if (!menuInicio) menuInicio = t;
+  const s = (t - menuInicio) / 1000;
+  desenharFundo(gf, s, 0.5);
+  if (!$('tela-inicio').hidden) {
+    gn.clearRect(0, 0, 200, 163);
+    desenharJogador(gn, 100, 74 + Math.sin(s * 2) * 4, s, Math.sin(s * 1.3) * 90, 1.7);
+  }
+  requestAnimationFrame(quadroMenu);
+}
+function ligarMenu() {
+  if (menuRodando) return;
+  menuRodando = true;
+  menuInicio = 0;
+  requestAnimationFrame(quadroMenu);
+}
+function desligarMenu() {
+  menuRodando = false;
+}
+
+/* ---------- entrada ---------- */
 function ladoDoToque(e) {
   const r = canvas.getBoundingClientRect();
   return e.clientX < r.left + r.width / 2 ? -1 : 1;
@@ -83,10 +122,23 @@ function direcaoDaEntrada() {
   return L.clamp(d, -1, 1);
 }
 
+// o toque no botão de pausa do painel não vale como movimento
+function noBotaoDePausa(e) {
+  const r = canvas.getBoundingClientRect();
+  const x = ((e.clientX - r.left) / r.width) * L.LARGURA;
+  const y = ((e.clientY - r.top) / r.height) * L.ALTURA;
+  const a = L.AREA_PAUSA;
+  return x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h;
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   if (!rodando) return;
   e.preventDefault();
   liberarSom();
+  if (noBotaoDePausa(e)) {
+    alternarPausa();
+    return;
+  }
   canvas.setPointerCapture(e.pointerId);
   toques.set(e.pointerId, ladoDoToque(e));
 });
@@ -109,17 +161,20 @@ window.addEventListener('keyup', (e) => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && rodando && !pausado) alternarPausa();
 });
-window.addEventListener('resize', () => { if (rodando) ajustarCanvas(); });
+window.addEventListener('resize', () => {
+  ajustarFundo();
+  if (rodando) ajustarCanvas();
+  else ajustarMenu();
+});
 
 /* ---------- laço do jogo ---------- */
-function tocarEventos() {
+const SONS = { tiro: 'tiro', explosao: 'explosao', disparo: 'disparo', perdeu: 'perdeu', fase: 'fase', vida: 'vida' };
+
+function tratarEventos() {
   for (const ev of partida.eventos.splice(0)) {
-    if (ev === 'perdeu') { tocar('perdeu'); vibrar(80); }
-    else if (ev === 'explosao') tocar('explosao');
-    else if (ev === 'chute') tocar('chute');
-    else if (ev === 'cartao') tocar('cartao');
-    else if (ev === 'fase') tocar('fase');
-    else if (ev === 'vida') tocar('vida');
+    reagir(efeitos, ev);
+    if (SONS[ev.tipo]) tocar(SONS[ev.tipo]);
+    if (ev.tipo === 'perdeu') vibrar(80);
   }
 }
 
@@ -129,9 +184,11 @@ function quadro(t) {
   ultimoQuadro = t;
   if (!pausado) {
     atualizar(partida, dt, direcaoDaEntrada());
-    tocarEventos();
+    tratarEventos();
+    atualizarEfeitos(efeitos, Math.min(dt, 0.05));
+    if (partida.estado === 'jogando') rastroDoMotor(efeitos, partida.jx, L.Y_JOGADOR, Math.min(dt, 0.05));
   }
-  desenharPartida(g, partida, t / 1000);
+  desenharPartida(g, partida, efeitos, t / 1000);
   if (partida.estado === 'fim') {
     terminar();
     return;
@@ -147,7 +204,10 @@ function alternarPausa() {
 }
 
 function comecarPartida() {
-  partida = novaPartida({ time: escolhido, ids: IDS_TIMES });
+  partida = novaPartida();
+  efeitos = novosEfeitos();
+  desligarMenu();
+  desenharFundo(gf, 0, 0); // céu parado nas faixas ao lado e acima do campo, que não é do tamanho da tela
   mostrar('tela-jogo');
   ajustarCanvas();
   rodando = true;
@@ -166,8 +226,9 @@ async function terminar() {
   const res = resultado(partida);
   partida = null;
   mostrar('tela-fim');
+  ligarMenu();
   $('fim-pontos').textContent = String(res.pontos);
-  $('fim-detalhe').textContent = `Fase ${res.fase} · ${res.naves} ${res.naves === 1 ? 'nave derrubada' : 'naves derrubadas'}`;
+  $('fim-detalhe').textContent = `Onda ${res.fase} · ${res.naves} ${res.naves === 1 ? 'nave derrubada' : 'naves derrubadas'}`;
   const recorde = lerRecorde();
   if (res.pontos > recorde) guardarRecorde(res.pontos);
   $('fim-recorde').textContent = `Recorde neste aparelho: ${Math.max(recorde, res.pontos)}`;
@@ -193,18 +254,7 @@ async function terminar() {
   }
 }
 
-/* ---------- início, times, ranking e conta ---------- */
-function desenharEscolhido() {
-  const box = $('escolhido');
-  box.replaceChildren();
-  if (!escolhido) {
-    box.append(elemento('p', { class: 'ajuda', text: 'Escolha seu time para começar.' }));
-    return;
-  }
-  const t = TIMES_POR_ID[escolhido];
-  box.append(spriteBandeira(escolhido, 64, 42), elemento('span', { class: 'nome-time', text: t.nome }));
-}
-
+/* ---------- início, ranking e conta ---------- */
 function atualizarBotoesDeConta() {
   const servidor = estadoConta !== null;
   $('btn-conta').hidden = !servidor;
@@ -212,30 +262,16 @@ function atualizarBotoesDeConta() {
   if (servidor) $('btn-conta').textContent = estadoConta.logado ? `Perfil: ${estadoConta.apelido}` : 'Entrar';
 }
 
-function abrirTimes() {
-  const grade = $('grade-times');
-  grade.replaceChildren(...TIMES.map((t) => {
-    const botao = elemento('button', { class: 'time-card' + (t.id === escolhido ? ' on' : ''), type: 'button', 'aria-label': t.nome });
-    botao.append(spriteBandeira(t.id, 56, 38), elemento('span', { text: t.nome }));
-    botao.addEventListener('click', () => {
-      escolhido = t.id;
-      guardarTime(t.id);
-      desenharEscolhido();
-      abrirInicio();
-    });
-    return botao;
-  }));
-  mostrar('tela-times');
-}
-
 function abrirInicio() {
-  desenharEscolhido();
   mostrar('tela-inicio');
+  ajustarMenu();
+  ligarMenu();
 }
 
 async function abrirRanking(escopo = escopoRanking) {
   escopoRanking = escopo;
   mostrar('tela-ranking');
+  ligarMenu();
   for (const b of document.querySelectorAll('[data-escopo]')) b.classList.toggle('on', b.dataset.escopo === escopo);
   const lista = $('lista-ranking');
   const status = $('status-ranking');
@@ -249,20 +285,16 @@ async function abrirRanking(escopo = escopoRanking) {
   }
   const linha = (item) => elemento('li', { class: 'linha-rank' + (estadoConta && estadoConta.logado && r.eu && item.posicao === r.eu.posicao ? ' eu' : '') },
     elemento('span', { class: 'pos', text: `${item.posicao}º` }),
-    spriteBandeira(item.time, 28, 19),
     elemento('span', { class: 'apelido', text: item.apelido }),
+    elemento('span', { class: 'onda', text: `onda ${item.fase}` }),
     elemento('span', { class: 'pontos', text: String(item.pontos) }));
   lista.replaceChildren(...r.top.map(linha));
   if (r.eu && r.eu.posicao > r.top.length) lista.append(elemento('li', { class: 'separador', text: '···' }), linha(r.eu));
   const onde = escopo === 'mes' ? 'neste mês' : 'no geral';
-  status.textContent = r.total ? `${r.total} ${r.total === 1 ? 'partida' : 'partidas'} ${onde}` : `Ainda não há partidas ${onde}.`;
+  status.textContent = r.total ? `${r.total} ${r.total === 1 ? 'piloto' : 'pilotos'} ${onde}` : `Ainda não há partidas ${onde}.`;
 }
 
 async function jogar() {
-  if (!escolhido) {
-    abrirTimes();
-    return;
-  }
   liberarSom();
   partidaServidor = null;
   semRanking = null;
@@ -277,7 +309,7 @@ async function jogar() {
         if (!r) return;
         e = { logado: true, apelido: r.apelido };
       }
-      partidaServidor = await iniciarPartida(escolhido);
+      partidaServidor = await iniciarPartida();
       if (!partidaServidor) {
         abrirInicio();
         $('aviso-inicio').textContent = 'Não consegui começar a partida agora. Tente de novo.';
@@ -316,14 +348,11 @@ function atualizarBotaoSom() {
 /* ---------- ligar tudo ---------- */
 function ligarBotoes() {
   $('btn-jogar').addEventListener('click', jogar);
-  $('btn-times').addEventListener('click', abrirTimes);
   $('btn-ranking').addEventListener('click', () => abrirRanking('geral'));
   $('btn-conta').addEventListener('click', botaoConta);
   $('btn-som').addEventListener('click', () => { alternarSom(); atualizarBotaoSom(); });
-  $('btn-voltar-times').addEventListener('click', abrirInicio);
   $('btn-voltar-ranking').addEventListener('click', abrirInicio);
   for (const b of document.querySelectorAll('[data-escopo]')) b.addEventListener('click', () => abrirRanking(b.dataset.escopo));
-  $('btn-pausa').addEventListener('click', alternarPausa);
   $('btn-continuar').addEventListener('click', alternarPausa);
   $('btn-sair').addEventListener('click', sairParaInicio);
   $('btn-de-novo').addEventListener('click', jogar);
@@ -332,9 +361,9 @@ function ligarBotoes() {
 }
 
 async function iniciar() {
-  escolhido = lerTime();
   ligarBotoes();
   atualizarBotaoSom();
+  ajustarFundo();
   abrirInicio();
   estadoConta = await eu();
   atualizarBotoesDeConta();

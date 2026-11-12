@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Invasão FC</title>
-<meta name="theme-color" content="#0a0c24">
-<meta name="description" content="Defenda seu time das naves dos adversários. Chute bolas de futebol e passe de fase.">
+<title>Invasão Estelar</title>
+<meta name="theme-color" content="#04061a">
+<meta name="description" content="Pilote sua nave, derrube ondas de naves alienígenas e entre no ranking.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
@@ -13,30 +13,23 @@
 <script src="/conta.js?v=2"></script>
 </head>
 <body>
+<canvas id="fundo" aria-hidden="true"></canvas>
 <main id="app">
 
   <section id="tela-inicio" class="tela">
     <div class="topo">
-      <h1>Invasão FC</h1>
-      <p class="sub">Chute a bola e derrube as naves dos adversários.</p>
+      <p class="kicker">Defenda a galáxia</p>
+      <h1><span>Invasão</span><span>Estelar</span></h1>
     </div>
-    <div id="escolhido" class="escolhido"></div>
+    <canvas id="nave-menu" class="nave-menu" width="320" height="260" aria-hidden="true"></canvas>
     <p id="aviso-inicio" class="aviso" role="status"></p>
     <div class="botoes">
       <button id="btn-jogar" class="btn principal" type="button">Jogar</button>
-      <button id="btn-times" class="btn" type="button">Escolher time</button>
       <button id="btn-ranking" class="btn" type="button" hidden>Ranking</button>
       <button id="btn-conta" class="btn suave" type="button" hidden>Entrar</button>
       <button id="btn-som" class="btn suave" type="button">Som: ligado</button>
     </div>
-    <p class="ajuda">Segure a metade esquerda ou direita da tela para andar. A bandeira chuta sozinha.</p>
-  </section>
-
-  <section id="tela-times" class="tela" hidden>
-    <h2>Escolha seu time</h2>
-    <p class="ajuda">Esse time nunca aparece como adversário.</p>
-    <div id="grade-times" class="grade"></div>
-    <button id="btn-voltar-times" class="btn suave" type="button">Voltar</button>
+    <p class="ajuda">Segure a metade esquerda ou direita da tela para pilotar. A nave atira sozinha.</p>
   </section>
 
   <section id="tela-ranking" class="tela" hidden>
@@ -52,7 +45,6 @@
 
   <section id="tela-jogo" class="tela tela-jogo" hidden>
     <canvas id="campo" aria-label="Partida"></canvas>
-    <button id="btn-pausa" class="pausa-btn" type="button" aria-label="Pausar">❚❚</button>
     <div id="pausa" class="sobre" hidden>
       <h2>Pausado</h2>
       <button id="btn-continuar" class="btn principal" type="button">Continuar</button>

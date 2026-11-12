@@ -28,19 +28,19 @@ async function api(caminho, { metodo = 'GET', corpo } = {}) {
 }
 
 // Começa uma partida no servidor (o relógio começa aqui). Devolve o id ou null.
-export async function iniciarPartida(idTime) {
-  const r = await api('/api/invasao-fc/iniciar', { metodo: 'POST', corpo: { time: idTime } });
+export async function iniciarPartida() {
+  const r = await api('/api/invasao-estelar/iniciar', { metodo: 'POST', corpo: {} });
   return r.status === 200 ? r.dados.partida : null;
 }
 
 // Envia o resultado da partida. Devolve { ok, geral, mes } ou { erro }.
 export async function enviarPartida(partida, resultado) {
-  const r = await api('/api/invasao-fc/enviar', { metodo: 'POST', corpo: { partida, ...resultado } });
+  const r = await api('/api/invasao-estelar/enviar', { metodo: 'POST', corpo: { partida, ...resultado } });
   if (r.status === 200) return { ok: true, ...r.dados };
   return { erro: r.dados.erro || 'não consegui salvar agora' };
 }
 
 export async function ranking(escopo) {
-  const r = await api(`/api/invasao-fc/ranking?escopo=${escopo}`);
+  const r = await api(`/api/invasao-estelar/ranking?escopo=${escopo}`);
   return r.status === 200 ? r.dados : null;
 }
