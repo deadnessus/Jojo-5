@@ -27,7 +27,9 @@ export const DESCIDA_MAX = 110; // px: quanto o grupo desce no máximo
 export const PADROES_NA_VOLTA = 8;
 // Área do botão de pausa no painel (coordenadas do jogo): x, y, largura, altura
 export const AREA_PAUSA = { x: 312, y: 46, w: 48, h: 26 };
-export const NUM_TIPOS = 10; // tipos de nave inimiga (um por onda, em ciclo)
+export const NUM_TIPOS = 10; // tipos de inimigo (um por onda, em ciclo)
+export const NUM_CENARIOS = 4; // cenários de guerra do fundo
+export const ONDAS_POR_CENARIO = 2; // tipos de nave inimiga (um por onda, em ciclo)
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, k) => a + (b - a) * k;
@@ -52,6 +54,11 @@ export function padraoDaFase(fase) {
 // Tipo de nave inimiga: 10 tipos contra 8 padrões de movimento, então as combinações demoram a repetir.
 export function tipoDaFase(fase) {
   return (fase - 1) % NUM_TIPOS;
+}
+
+// O cenário do fundo muda a cada duas ondas.
+export function cenarioDaFase(fase) {
+  return Math.floor((fase - 1) / ONDAS_POR_CENARIO) % NUM_CENARIOS;
 }
 
 // Cada volta de 8 ondas fica um pouco mais rápida.

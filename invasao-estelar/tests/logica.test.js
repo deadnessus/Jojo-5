@@ -41,6 +41,15 @@ test('os 10 tipos de nave se alternam, e a combinação tipo + padrão demora a 
   assert.notEqual(L.tipoDaFase(1), L.tipoDaFase(2));
 });
 
+test('o cenário do fundo muda a cada duas ondas e passa pelos quatro', () => {
+  assert.equal(L.cenarioDaFase(1), 0);
+  assert.equal(L.cenarioDaFase(2), 0);
+  assert.equal(L.cenarioDaFase(3), 1);
+  assert.equal(L.cenarioDaFase(8), 3);
+  assert.equal(L.cenarioDaFase(9), 0);
+  for (let f = 1; f <= 200; f++) assert.ok(L.cenarioDaFase(f) >= 0 && L.cenarioDaFase(f) < L.NUM_CENARIOS);
+});
+
 test('pontos por nave sobem com a onda e param na onda 10', () => {
   assert.equal(L.pontosPorNave(1), 20);
   assert.equal(L.pontosPorNave(2), 40);

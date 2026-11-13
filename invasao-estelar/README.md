@@ -1,8 +1,10 @@
 # Invasão Estelar
 
 Jogo de celular inspirado no Atari (uma nave contra ondas de inimigos), para o site queres.games.
-A nave só anda para a esquerda e para a direita e atira sozinha. Cada onda traz um tipo de nave alienígena
-(10 tipos, com 8 jeitos de se mover), e o jogo fica mais rápido a cada volta de 8 ondas.
+A nave só anda para a esquerda e para a direita e atira sozinha. Cada onda traz um tipo de inimigo
+(10 tipos, entre naves de guerra e criaturas alienígenas, com 8 jeitos de se mover), e o jogo fica mais rápido
+a cada volta de 8 ondas. O fundo é um cenário de guerra que muda a cada duas ondas: Órbita em chamas,
+Batalha das frotas, Cemitério de naves e Lua partida.
 
 Login compartilhado (`/conta.js`) e ranking geral e do mês.
 
@@ -13,9 +15,10 @@ index.html, style.css, manifest.webmanifest, icone.svg   páginas e instalação
 src/
   logica.js        regras (ondas, padrões de movimento, entrada das naves, pontos, vidas, limites do servidor)
   motor.js         estado da partida e atualização a cada quadro (sem desenho)
-  naves.js         desenho das 10 naves inimigas (2 quadros cada) e da nave do jogador
+  naves.js         desenho dos 10 inimigos (2 quadros cada) e da nave do jogador
+  cenario.js       os 4 cenários de guerra do fundo (planeta, frotas, destroços, lua) e os combates ao longe
   efeitos.js       faíscas, ondas de choque, tremor de tela, rastro do motor
-  desenho.js       fundo (nebulosa e estrelas em camadas), tiros, painel, faixa de abertura
+  desenho.js       monta a tela: cenário, naves, tiros, painel, faixa de abertura
   som.js           sons feitos no código (Web Audio) e vibração
   conta-ponte.js   chamadas do login (QGConta) e da API de ranking
   main.js          telas, toque e teclado, laço do jogo, fluxo de conta e ranking
@@ -64,10 +67,15 @@ npm test          # regras, movimento, motor, conferência e rotas do servidor (
   onda. Isso limita trapaças, mas **não impede** quem conhece as regras de mandar números plausíveis.
 - **Recomeço por energia:** quando a energia acaba, a onda recomeça com naves novas e as derrubadas se acumulam. Por isso o
   limite do servidor é por total de naves, não por onda.
+- **Tela inteira:** o campo do jogo é sempre 360 x 640 (as regras não mudam com o aparelho). Em celular comprido, o
+  que sobra acima e abaixo mostra mais cenário e o painel sobe para o topo da tela; em tela larga, os lados ficam escuros.
+- **Cenários:** são só desenho (`cenario.js`), escuros de propósito para não competir com as naves e os tiros. O tiro
+  dos inimigos é verde para não se confundir com o fogo do fundo. O cenário de cada onda vem de `cenarioDaFase`.
 - **Movimento:** as naves entram voando em curva (2,4 s de abertura, sem tiros nem colisão); depois seguem um dos 8
   padrões e aceleram quando sobram poucas. O tempo de cada padrão é do grupo, então a velocidade muda sem saltos.
 
 ## Ajustar
 
 - Números do jogo: `src/logica.js`. Se mudar pontos, vidas ou limites, mude também `servidor/functions/_lib/invasao-estelar.js`.
-- Visual das naves: `src/naves.js` (`TIPOS`). Cada tipo é uma função que desenha em 60 x 48; `f` é o quadro (0 ou 1).
+- Visual dos inimigos: `src/naves.js` (`TIPOS`). Cada tipo é uma função que desenha em 60 x 48, de frente para baixo; `f` é o quadro (0 ou 1).
+- Cenários: `src/cenario.js` (`CENARIOS`). Para um cenário novo, acrescente um item na lista e aumente `NUM_CENARIOS` em `src/logica.js`.
