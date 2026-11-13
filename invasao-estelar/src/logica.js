@@ -27,6 +27,7 @@ export const DESCIDA_MAX = 110; // px: quanto o grupo desce no máximo
 export const PADROES_NA_VOLTA = 8;
 // Área do botão de pausa no painel (coordenadas do jogo): x, y, largura, altura
 export const AREA_PAUSA = { x: 312, y: 46, w: 48, h: 26 };
+export const PAUSA_MERGULHO = 5; // segundos (do grupo) até o primeiro mergulho; a abertura da onda já gasta 2,4
 export const NUM_TIPOS = 10; // tipos de inimigo (um por onda, em ciclo)
 export const NUM_CENARIOS = 4; // cenários de guerra do fundo
 export const ONDAS_POR_CENARIO = 2; // tipos de nave inimiga (um por onda, em ciclo)
@@ -118,18 +119,19 @@ export function posicaoPadrao(padrao, nave, tm, ctx) {
       const dir = r % 2 ? 1 : -1;
       return { x: darVolta(hx + dir * tm * (55 + r * 20) * k), y: y0 + Math.sin(tm * 1.5 + i) * 6 };
     }
-    case 3: { // mergulho: a formação balança e uma nave de cada vez se solta em curva até perto do jogador
+    case 3: { // mergulho: a formação balança e, depois de uma pausa, UMA nave de cada vez se solta em curva até perto do jogador
       const fx = hx + Math.sin(tm * 0.9) * 30;
       const fy = y0;
-      const P = 7 / k;
-      const p = (tm + i * 0.7) % P;
-      const inicio = P * 0.6;
-      if (p < inicio) return { x: fx, y: fy + Math.sin(tm * 2 + i) * 3 };
-      const u = (p - inicio) / (P - inicio);
+      const intervalo = 1.6 / k; // uma nave nova começa a mergulhar a cada intervalo...
+      const duracao = 2.8 / k; // ...e cada mergulho dura mais que isso, então são no máximo 2 ao mesmo tempo
+      const ciclo = n * intervalo;
+      const desde = tm - PAUSA_MERGULHO - i * intervalo;
+      if (desde < 0 || desde % ciclo >= duracao) return { x: fx, y: fy + Math.sin(tm * 2 + i) * 3 };
+      const u = (desde % ciclo) / duracao;
       const fundo = Math.sin(Math.PI * u);
       const lado = i % 2 ? 1 : -1;
       return {
-        x: clamp(fx + (ctx.jx - fx) * fundo * 0.8 + lado * 55 * Math.sin(2 * Math.PI * u), 30, LARGURA - 30),
+        x: clamp(fx + (ctx.jx - fx) * fundo * 0.6 + lado * 55 * Math.sin(2 * Math.PI * u), 30, LARGURA - 30),
         y: fy + (Y_JOGADOR - 28 - fy) * fundo,
       };
     }

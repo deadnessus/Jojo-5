@@ -119,6 +119,23 @@ test('o mergulho chega perto da nave do jogador e depois volta para a formação
   assert.ok(voltou, 'não voltou para a formação');
 });
 
+test('no mergulho ninguém desce no começo da onda e no máximo 2 descem juntas', () => {
+  for (const k of [1, 1.12, 1.24]) {
+    for (let n = 8; n <= 12; n++) {
+      for (let tm = 0; tm < 60; tm += 0.05) {
+        let descendo = 0;
+        for (let i = 0; i < n; i++) {
+          const nave = { i, n, hx: 75 + (i % 4) * 70, hy: 108 + Math.floor(i / 4) * 46 };
+          const p = L.posicaoPadrao(3, nave, tm, { jx: 180, vel: k, descida: 0 });
+          if (p.y > nave.hy + 15) descendo++;
+        }
+        if (tm < L.PAUSA_MERGULHO) assert.equal(descendo, 0, `mergulho antes da pausa (tm=${tm.toFixed(2)})`);
+        assert.ok(descendo <= 2, `${descendo} naves descendo juntas (n=${n}, k=${k}, tm=${tm.toFixed(2)})`);
+      }
+    }
+  }
+});
+
 test('na entrada as naves vêm de fora da tela e se juntam ao padrão', () => {
   const ctx = { jx: 180, vel: 1, descida: 0 };
   for (let i = 0; i < 12; i++) {
