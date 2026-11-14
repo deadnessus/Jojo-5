@@ -57,10 +57,12 @@ test('pontos por nave sobem com a onda e param na onda 10', () => {
   assert.equal(L.pontosPorNave(50), 200);
 });
 
-test('vidas extras entram a cada 10.000 pontos', () => {
-  assert.equal(L.vidasGanhas(0, 9999), 0);
-  assert.equal(L.vidasGanhas(9990, 10000), 1);
-  assert.equal(L.vidasGanhas(5000, 25000), 2);
+test('vidas extras entram a cada VIDA_EXTRA_CADA pontos', () => {
+  const v = L.VIDA_EXTRA_CADA;
+  assert.equal(v, 30000);
+  assert.equal(L.vidasGanhas(0, v - 1), 0);
+  assert.equal(L.vidasGanhas(v - 10, v), 1);
+  assert.equal(L.vidasGanhas(v / 2, v * 2.5), 2);
 });
 
 test('o bônus cresce com a energia que sobra e com a onda', () => {
@@ -254,11 +256,11 @@ test('derrubar a última nave limpa a onda, dá o bônus e passa para a próxima
   assert.ok(p.eventos.some((e) => e.tipo === 'explosao' && Number.isFinite(e.x)));
 });
 
-test('passar de 10.000 pontos dá uma vida', () => {
+test('passar do limite de pontos dá uma vida', () => {
   const p = novaPartida({ rand: semente(5) });
   passarAbertura(p);
   p.vidas = 2;
-  p.pontos = 9990;
+  p.pontos = L.VIDA_EXTRA_CADA - 10;
   p.padrao = 6;
   p.tm = 0;
   p.naves.forEach((n) => { n.vivo = false; });
@@ -268,7 +270,7 @@ test('passar de 10.000 pontos dá uma vida', () => {
   p.tiros.push({ x: p.jx, y: 310 });
   p.cooldown = 10;
   atualizar(p, 1 / 60, 0);
-  assert.ok(p.pontos >= 10000);
+  assert.ok(p.pontos >= L.VIDA_EXTRA_CADA);
   assert.equal(p.vidas, 3);
 });
 

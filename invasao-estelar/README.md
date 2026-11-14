@@ -36,7 +36,7 @@ servidor/functions/
 - Celular: segure a metade esquerda ou direita da tela. O ícone no painel pausa.
 - Computador: setas ← → ou A e D. P ou Esc pausa.
 - A energia (barra no topo) esvazia durante a onda. Se zerar, perde uma nave e a onda recomeça. Quem derruba todas as
-  naves ganha o que sobrou de energia como bônus. A cada 10.000 pontos ganha uma nave extra (até 6).
+  naves ganha o que sobrou de energia como bônus. A cada 30.000 pontos ganha uma nave extra (até 6).
 
 ## Testes
 
@@ -76,7 +76,7 @@ npm test          # regras, movimento, motor, conferência e rotas do servidor (
 
 ## Ajustar
 
-- **Versão dos arquivos:** todos os `import` em `src/` e o `index.html` terminam em `?v=3`. Ao publicar uma atualização, troque o número em todos os lugares (`sed -i -E "s#\?v=3#?v=4#" src/*.js index.html`); sem isso, o navegador pode misturar arquivos velhos e novos. O número tem que ser igual em todos os arquivos.
+- **Versão dos arquivos:** todos os `import` em `src/` e o `index.html` terminam em `?v=4`. Ao publicar uma atualização, troque o número em todos os lugares (`sed -i -E "s#\?v=4#?v=4#" src/*.js index.html`); sem isso, o navegador pode misturar arquivos velhos e novos. O número tem que ser igual em todos os arquivos.
 
 - Números do jogo: `src/logica.js`. Se mudar pontos, vidas ou limites, mude também `servidor/functions/_lib/invasao-estelar.js`.
 - Visual dos inimigos: `src/naves.js` (`TIPOS`). Cada tipo é uma função que desenha em 60 x 48, de frente para baixo; `f` é o quadro (0 ou 1).
