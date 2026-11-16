@@ -76,7 +76,7 @@ npm test          # regras, movimento, motor, conferência e rotas do servidor (
 
 ## Ajustar
 
-- **Versão dos arquivos:** todos os `import` em `src/` e o `index.html` terminam em `?v=4`. Ao publicar uma atualização, troque o número em todos os lugares (`sed -i -E "s#\?v=4#?v=4#" src/*.js index.html`); sem isso, o navegador pode misturar arquivos velhos e novos. O número tem que ser igual em todos os arquivos.
+- **Versão dos arquivos:** todos os `import` em `src/` e o `index.html` terminam em `?v=5`. Ao publicar uma atualização, troque o número em todos os lugares (`sed -i -E "s#\?v=5#?v=6#" src/*.js index.html`); sem isso, o navegador pode misturar arquivos velhos e novos. O número tem que ser igual em todos os arquivos.
 
 - Números do jogo: `src/logica.js`. Se mudar pontos, vidas ou limites, mude também `servidor/functions/_lib/invasao-estelar.js`.
 - Visual dos inimigos: `src/naves.js` (`TIPOS`). Cada tipo é uma função que desenha em 60 x 48, de frente para baixo; `f` é o quadro (0 ou 1).
