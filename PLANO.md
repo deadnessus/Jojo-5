@@ -1,6 +1,7 @@
 > **Plano original, superado.** Este documento descreve a primeira ideia (bandeiras de times de futebol, bola como tiro).
 > O jogo foi refeito sem futebol: nave espacial, laser e ondas de naves alienígenas. O que vale hoje está em
 > `invasao-estelar/README.md`. O login/ranking e as etapas de publicação abaixo continuam valendo.
+> O plano para as próximas melhorias está em `PLANO-EVOLUCAO.md`.
 
 # Plano — jogo de nave com times de futebol (estilo "atirador de ondas" do Atari)
 
