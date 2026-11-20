@@ -1,8 +1,0 @@
-{
-  "name": "invasao-estelar",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node --test tests/logica.test.js tests/servidor.test.js"
-  }
-}

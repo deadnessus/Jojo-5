@@ -1,1 +1,0 @@
-{ "eventos": ["partida_iniciada", "partida_terminada", "partida_pausada", "saiu_da_partida", "ranking_aberto"] }

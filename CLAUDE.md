@@ -1,6 +1,6 @@
 # queres.games: medição de uso e melhorias
 
-Este jogo (pasta `invasao-estelar/`) é publicado em https://queres.games/jogar/invasao-estelar/ por outro repositório (`deadnessus/queres-games`).
+**O jogo Invasão Estelar, que ficava aqui na pasta `invasao-estelar/`, mudou para o repositório `deadnessus/Megamania` em 20/11/2026** (lá estão o jogo, o histórico, o plano de evolução e as issues). Este repositório ficou sem jogo. As regras abaixo valem para o próximo jogo feito aqui e publicado no queres.games (https://queres.games), que é publicado por outro repositório (`deadnessus/queres-games`).
 
 **A telemetria é automática pelo site.** O site mede, de forma anônima, sessões, tempo de uso, erros de JavaScript, celular ou computador, tamanho de tela e se o aparelho volta em outro dia, e marca tudo com a versão do jogo.
 - **Não crie analytics próprio** neste jogo: nada de Google Analytics, contadores, `fetch` para servidores de medição, cookies de medição, nem identificador de jogador. É um site para crianças (LGPD): não coletamos nome, e-mail, IP nem texto livre. (O ranking do jogo, com apelido da conta, é outra coisa e continua como está.)
